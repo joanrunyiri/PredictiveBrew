@@ -1,0 +1,149 @@
+\documentclass{article}
+ 
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{geometry}
+\usepackage{amsmath}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\geometry{a4paper, portrait, margin=2in}
+\newenvironment{breakablealgorithm}
+\SetAlFnt{\large}
+\SetAlCapFnt{\large}
+\SetAlCapNameFnt{\large}
+\SetAlgoLined
+\begin{document}
+
+ 
+% The Monte Carlo Tree Search Algorithm
+
+
+
+%%%%%%%%%%%%% THE FIRST ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{algorithm}[H]
+
+
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{The state, $s_0$, of the current root node, $n_0$ (s($n_0$))}
+\Output{The action, $a$, that leads to the most optimum child node that has a desirable state}
+\BlankLine
+\SetKwProg{Fn}{Function}{}{}
+\Fn{MCTS($s_0$)}{
+create root node $n_0$ with state $s_0$\; 
+\BlankLine
+
+\While{within computational budget}{    
+    
+    \BlankLine
+    \tcc{The $SELECTEXPAND$ function is used to select a child node according to a predefined utility function: ``UCT lean-LGRF'' in the case of this study. This selected child node $n_i$ is then added to the search tree in the process of expansion. The variated expansion stage goes a step further to add all the 3 possible children of the child node $n_i$.}
+    $n_i \leftarrow SELECTEXPAND(s(n_0))$    \;
+    \BlankLine
+    \tcc{The $SIMULATEBACKPROPAGATE$ function is used to randomly simulate possible scenarios from the newly expanded node $n_i$. A reward value is calculated by executing each of the possible actions available from the newly expanded node. This is then stored in $\Delta$ and back-propagated up the tree to update the node values.}
+    $\Delta \leftarrow SIMULATEBACKPROPAGATE(s(n_i))$    \;
+}
+\BlankLine
+
+\tcc{The result of the overall search, $a(SELECT(n_0))$, is the action, $a$, that leads to the best child of the root node, $n_0$, where the exact definition of ``best'' is defined by the implementation. In the case of this study, ``best'' is the node with the highest discounted transaction throughput (for OLTP) or the lowest discounted response-time latency (for OLAP).}
+\Return $a(SELECT(n_0))$ \;
+}
+
+\caption{The Basic Monte Carlo Tree Search Algorithm}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%SECOND ALGORITHM%%%%%%%%%%%%%%%
+\begin{algorithm}[H]
+
+
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{The state, $s_0$, of the current root node, $n_0$ (s($n_0$))}
+\Output{The child node $n_i$ that has been selected through either exploitation or exploration. In addition to $n_i$, all its 3 children are also specified as output.}
+\BlankLine
+
+\SetKwProg{Fn}{Function}{}{}
+\Fn{SELECTEXPAND($n_0$)}{
+\While{$n_0$ is non-terminal}{    
+  \uIf{$n_0$ has been fully expanded}{
+    \Return $\Delta \leftarrow SELECT(n_0)$    \;
+  }
+  \Else{
+    \Return $EXPAND(n_0)$   \;
+  }
+}
+}
+
+\BlankLine
+\BlankLine
+\BlankLine
+
+\SetKwProg{Fn}{Function}{}{}
+\Fn{SELECT($n_0$)}{
+
+\tcc{Determines the best child, $\Delta$, to select out of all the other possible children of node $n_0$. This is based on the value of the UCT lean-LGRF variation to the selection stage.}
+
+\Return \( \displaystyle \argmax_{i \in children Of The Root Node} \Bigg(\frac{\gamma (n_i)}{x(n_i)} + lean\_LGRF(n_0, n_i) + \sqrt {c \times \frac{ \log (t)}{x(n_i)}}\Bigg) \) \;
+
+}
+
+\BlankLine
+\BlankLine
+\BlankLine
+
+\SetKwProg{Fn}{Function}{}{}
+\Fn{EXPAND($n_0$)}{
+    perform $a \in untried$ $actions$ from $A(s(n_0))$ \;
+    add new child $n_i$ to $n_{i-1}$
+    \linebreak
+    with $a(n_i) \leftarrow a$
+    \linebreak
+    and $s(n_i) \leftarrow f(s(n_{i-1}), a)$ \;
+    add all children of $n_i$ to $n_i$ \;
+    \Return $n_i$, $children\ of\ n_i$ \;
+}
+
+\caption{Variated Selection and Variated Expansion Stages of the Monte Carlo Tree Search Algorithm}
+\end{algorithm}
+
+\pagebreak
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%THIRD ALGORITHM%%%%%%%%%%%%%%%
+\begin{algorithm}[H]
+
+
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{The state, $s_i$, of the current node, $n_i$ (s($n_i$))}
+\Output{The reward value of node $n_i$}
+
+\SetKwProg{Fn}{Function}{}{}
+\Fn{SIMULATEBACKPROPAGATE($s(n_i)$)}{
+    \While{$A(s(n_i))$ is not empty and $x(n_i)<$1,000,000}{
+        perform $a \in A(s(n_i))$ at random \;
+        $s(n_i) \leftarrow f(s(n_{i-1}),a)$ \;
+        \tcc{$x(n_i)$ is the number of times node $n_i$ has been traversed}
+        $x(n_i) \leftarrow x(n_i) + 1$ \;
+        \uIf{$result$ is a win}{
+        \tcc{The number of simulated wins that have occurred when node $n_i$ was traversed; where a ``win'' is defined by the implementation. In the case of this study, ``win'' is the node with the highest discounted transaction throughput (for OLTP) or the least response-time latency (for OLAP).}
+            $w_i \leftarrow w_i$ + 1 \;
+        }
+    }
+        SIMULATEBACKPROPAGATE(for all the children of $n_i$) \;
+        BACKPROPAGATE($n_i$) \;
+}
+
+\BlankLine
+\BlankLine
+\BlankLine
+
+\SetKwProg{Fn}{Function}{}{}
+\Fn{BACKPROPAGATE($n_i$)}{
+    \While{$n_i$ is not $null$}{
+        update $rewardValueOfNode$ $n_i$ \;
+        \tcc{$w_i$ = discounted transaction throughput (for OLTP) or the least response-time latency (for OLAP) for node $n_i$ and all of its children}
+        update $w_i$ \;
+        \tcc{$x_i$ = number of traversals (visits) made on node $n_i$ and all of its children}
+        update $x_i$ \;
+        update $rewardValueOfNode$ $n_i = \dfrac{\gamma (n_i)}{x(n_i)}$ \;
+        $n_i \leftarrow$ parent of $n_{i-1}$ \;
+    }
+}
+\caption{Variated Simulation and Back-Propagation Stages of the Monte Carlo Tree Search Algorithm}
+\end{algorithm}
+
+\end{document}
